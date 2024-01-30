@@ -1,31 +1,30 @@
 <template>
     <div class="data-table">
       <div class="search-container">
-        <input type="text" placeholder="Search..." class="search-input">
-        <button class="search-button">Search</button>
-      </div>
+    <input type="text" v-model="searchQuery" placeholder="Search..." class="search-input">
+    <button @click="search" class="search-button">Search</button>
+  </div>
       <table>
-        <!-- Table header -->
         <thead>
           <tr>
-            <th>Order date</th>
-            <th>Delivered Amount</th>
-            <th>Total Amount</th>
             <th>Order name</th>
             <th>Customer Company</th>
             <th>Customer name</th>
+            <th>Order date</th>
+            <th>Delivered Amount</th>
+            <th>Total Amount</th>
           </tr>
         </thead>
-        <!-- Table body -->
         <tbody>
-          <!-- Loop through your data here -->
-          <tr v-for="(item, index) in data" :key="item.orderName" :class="{ fade: index === currentIndex }">
-            <td>{{ item.orderDate }}</td>
-            <td>{{ item.deliveredAmount }}</td>
-            <td>{{ item.totalAmount }}</td>
-            <td>{{ item.orderName }}</td>
-            <td>{{ item.customerCompany }}</td>
-            <td>{{ item.customerName }}</td>
+          <tr v-for="(item, index) in paginatedData" :key="index" :class="{ fade: index === currentIndex }">
+            <td>{{ item.order_name }}</td>
+            <!-- <td>{{logAndReturn(item.orderName)}}</td>
+            <td>{{logAndReturn(item.companyName)}}</td> -->
+            <td>{{ item.company_name }}</td>
+            <td>{{ item.name }}</td>
+            <td>{{ item.created_at }}</td>
+            <td>{{ item.delivered_amount }}</td>
+            <td>{{ item.total_amount }}</td>
           </tr>
         </tbody>
       </table>
@@ -38,61 +37,102 @@
   </template>
   
   <script>
+  import axios from 'axios';
+  import moment from 'moment';
   export default {
     data() {
       return {
-        data: [
-          {
-            orderDate: 'Apr 23rd, 4:18 AM',
-            deliveredAmount: '$99.11',
-            totalAmount: '$99.11',
-            orderName: '#C19190',
-            customerCompany: 'Sony Ericsson',
-            customerName: 'Dr. Harold Senger',
-          },
-          {
-            orderDate: 'Apr 23rd, 4:20 AM',
-            deliveredAmount: '$99.11',
-            totalAmount: '$99.11',
-            orderName: '#C19190',
-            customerCompany: 'Comedy Central Inc',
-            customerName: 'Waylon Beahan V',
-          },
-        ],
+        data: [],
         currentPage: 1,
         itemsPerPage: 5,
-        currentIndex: 0,
+        searchQuery: ''
+        // currentIndex: 0,
       };
     },
+
     computed: {
       totalPages() {
         return Math.ceil(this.data.length / this.itemsPerPage);
       },
-      currentData() {
-        const startIndex = (this.currentPage - 1) * this.itemsPerPage;
-        return this.data.slice(startIndex, startIndex + this.itemsPerPage);
+      paginatedData() {
+        console.log('Data before pagination:', this.data);
+        const start = (this.currentPage - 1) * this.itemsPerPage;
+        const end = start + this.itemsPerPage;
+        return this.data.slice(start, end);
       },
+
+      filteredData() {
+        const query = this.searchQuery.toLowerCase();
+        return this.data.filter(item => item.order_name.toLowerCase().includes(query));
     },
+      // currentData() {
+      //   const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+      //   return this.data.slice(startIndex, startIndex + this.itemsPerPage);
+      // },
+      formattedApiData() {
+        return this.data.map(item => ({
+        orderName: item.order_name,
+        companyName: item.company_name,
+        name: item.name,
+        created_at: moment(item.created_at).format('YYYY-MM-DD HH:mm:ss'),
+        deliveredAmount: item.delivered_amount,
+        totalAmount: item.total_amount,
+        price: item.price,
+        deliveredQuantity: item.delivered_quantity,
+      }));
+      // console.log('ini formated data: ',formattedData);
+      // return formattedData;
+    }
+    },
+    mounted() {
+      this.getData();
+      console.log('Data saya:', this.formattedApiData);
+  },
     methods: {
-      nextPage() {
-        if (this.currentPage < this.totalPages) {
-          this.currentPage++;
-          this.currentIndex = (this.currentPage - 1) * this.itemsPerPage;
-        }
-      },
       prevPage() {
-        if (this.currentPage > 1) {
-          this.currentPage--;
-          this.currentIndex = (this.currentPage - 1) * this.itemsPerPage;
-        }
+      if (this.currentPage > 1) {
+        this.currentPage--;
+      }
+    },
+    nextPage() {
+      if (this.currentPage < this.totalPages) {
+        this.currentPage++;
+      }
+    },
+    search() {
+      this.data = this.filteredData;
+      // reset data
+      this.currentPage = 1;
+    },
+      logAndReturn(value) {
+        console.log('Value:', value);
+        return value;
       },
+      async getData(){
+        try {
+              // url = 'https://4pt4n6d6-8080.asse.devtunnels.ms/order';
+              // const response = { data: { data: [{ order_name: 'PO #001-I' }] } };
+              const response = await axios.get('https://4pt4n6d6-8080.asse.devtunnels.ms/order');
+              // console.log(response.data);
+              // this.apiData = response.data.data;
+              this.data = [...response.data.data];
+              console.log('api data :', this.data = [...response.data.data]);
+              // this.$set(this, 'apiData', response.data.data);
+              // console.log('test jnck',this.$set(this, 'apiData', response.data.data))
+              // const data = this.apiData.data
+              // console.log('apiData:', this.apiData);
+              // console.log('testing data:',data[0].company_name);
+        } catch (error) {
+          console.error('Error fetching data:', error);
+        }
+      }
     },
   };
   </script>
   
   <style scoped>
   .data-table {
-    max-width: 800px;
+    max-width: 1000px;
     margin: 0 auto;
     padding: 20px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
